@@ -1,6 +1,6 @@
-# Timing attack against a MAC-then-encrypt scheme
+# Cryptography: compromising the MAC-then-encrypt scheme
 
-This is a proof-of-concept for a timing attack against an AES/CBC encryption scheme using a MAC-then-encrypt scheme for integrity. This attack manages to successfully decrypt the first byte of each 16-byte block.
+This is a proof-of-concept for a timing attack against an [AES/CBC](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Cipher_Block_Chaining_.28CBC.29) encryption scheme using a [MAC-then-encrypt](https://en.wikipedia.org/wiki/Authenticated_encryption#MAC-then-Encrypt_.28MtE.29) scheme for integrity. This attack manages to successfully decrypt the first byte of each 16-byte block.
 
 This is adapated from https://gist.github.com/defuse/0822a9c6d70ab4939c95, rewritten in Python 3 using the PyCrypto library.
 
