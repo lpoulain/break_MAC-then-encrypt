@@ -57,9 +57,11 @@ def decrypt(enc_message, key):
 		return plaintext
 
 	# Simulates the timing attack
-	# If the two MACs differ but share the same first byte
-	# return 1
-	return 1 if computed_mac[0] == mac[0] else 0
+	# return 1 if the two MACs differ but share the same first byte
+	# return 2 if the two MACs differ but share the same first two bytes
+	if computed_mac[0] == mac[0]:
+		return 2 if computed_mac[1] == mac[1] else 1
+	return 0
 
 
 ##################################################
@@ -115,6 +117,7 @@ print('Information leaked:')
 
 # Generate a zero-filled IV
 iv = bytes(chr(0)*16, 'ascii')
+char_decrypted = []
 
 # We go through all the blocks but the first one (which is the IV)
 for idx in range(1, len(ct_blocks)):
@@ -124,7 +127,7 @@ for idx in range(1, len(ct_blocks)):
 	# We send a 3-block message to the decrypt function
 	# and repeat with a new rand until we get a collision
 	message = iv + rand + ct_blocks[idx]
-	while decrypt(message, secret_key) != 1:
+	while decrypt(message, secret_key) == 0:
 		rand = Random.new().read(AES.block_size)
 		message = iv + rand + ct_blocks[idx]
 
@@ -135,7 +138,7 @@ for idx in range(1, len(ct_blocks)):
 	for nb in range(0, 256):
 		message = iv + rand + CPA_dict[nb]
 		# If we have a collision
-		if decrypt(message, secret_key)	== 1:
+		if decrypt(message, secret_key)	> 0:
 			# MAC(Decr(rand))[0] = Decr(ct_blocks[idx])[0] (see line 132)
 			# MAC(Decr(rand))[0] = Decr(CPA_dict[nb])[0] = nb (per CPA_dict property, see line 89)
 			# => Decr(ct_blocks[idx])[0] = nb
@@ -145,4 +148,83 @@ for idx in range(1, len(ct_blocks)):
 			# => pt_blocks[idx][0] = Decr(ct_blocks[idx])[0] XOR ct_blocks[idx-1][0]
 			# => pt_blocks[idx][0] = nb XOR ct_blocks[idx-1][0]
 			decrypted_byte = nb ^ ct_blocks[idx-1][0]
-			print('Block #%d = [%s...]' % (idx, chr(decrypted_byte)) )
+			print('Block #%d = [%s...............]' % (idx, chr(decrypted_byte)) )
+			char_decrypted.append(decrypted_byte)
+
+
+################################################################
+# STEP #3: Conduct the Chosen-Plaintext Attack for first 2 chars
+################################################################
+# This attack is not scalable when it comes to read further characters
+# Just trying to decrypt the first two characters sees the number
+# of combinations explode.
+# Building the CPA dictionary for 2 characters takes ~800,000
+# encryptions, whereas it takes ~32678 encryption/decryption attempts
+# per cipher block if we try on demand (as implemented in step 4)
+# Building the CPA dictionary is worth it only where there are a
+# lot of cipher blocks
+"""CPA_dict2 = {}
+nb = 0
+
+while nb < 65536:
+	# We encrypt just one block, so the message should be 3 blocks:
+	# IV | ciphertext | MAC
+	message= encrypt(plaintext, secret_key)
+	iv = message[0:16]
+	ciphertext = message[16:-16]
+
+	# plaintext = Decr(ciphertext) XOR iv
+	# => Decr(ciphertext) = plaintext XOR iv
+	# => Decr(ciphertext)[0] = plaintext[0] XOR iv[0]
+	decrypted_first_byte = ord('a') ^ iv[0]
+	decrypted_second_byte = ord('a') ^ iv[1]
+	key = decrypted_first_byte * 256 + decrypted_second_byte
+	if not key in CPA_dict2:
+		CPA_dict2[key] = ciphertext"""
+
+#################################################################
+# STEP #4: Conduct the Chosen-Ciphertext Attack for first 2 bytes
+#################################################################
+print()
+print('Information leaked:')
+
+# Generate a zero-filled IV
+iv = bytes(chr(0)*16, 'ascii')
+
+# We go through all the blocks but the first one (which is the IV)
+for idx in range(1, len(ct_blocks)):
+	# Generate a random ciphertext
+	rand = Random.new().read(AES.block_size)
+
+	# We send a 3-block message to the decrypt function
+	# and repeat with a new rand until we get a collision
+	message = iv + rand + ct_blocks[idx]
+	while decrypt(message, secret_key) != 2:
+		rand = Random.new().read(AES.block_size)
+		message = iv + rand + ct_blocks[idx]
+
+	# Instead of building a CPA dictionary, we generate
+	# random ciphertexts (from a known plaintext) until we get a collision
+	# i.e. until its MAC has the first right two bytes
+	ciphertext = encrypt(plaintext, secret_key)
+	fake_mac = ciphertext[16:-16]
+	other_iv = ciphertext[0:16]
+	other_message = iv + rand + fake_mac
+	# Because we chose the plaintext, we know that:
+	# Decr(fake_mac) XOR other_iv = 'aaaaaaaaaaaaaaaa'
+	# => Decr(fake_mac) = 'aaaaaaaaaaaaaaaa' XOR other_iv
+
+	while decrypt(other_message, secret_key) != 2:
+		ciphertext = encrypt(plaintext, secret_key)
+		fake_mac = ciphertext[16:-16]
+		other_iv = ciphertext[0:16]
+		other_message = iv + rand + fake_mac
+
+	# When we have a collision:
+	# Decr(ct_blocks[idx])[i] = Decr(fake_mac)[i] (for i=0,1)
+	# => (pt_blocks[idx] XOR ct_blocks[idx-1])[i] = ('aaaaaaaaaaaaaaaa' XOR other_iv)[i]
+	# => pt_blocks[idx][i] XOR ct_blocks[idx-1][i] = 'a' XOR other_iv[i]
+	# => pt_blocks[idx][i] = ct_blocks[idx-1][i] XOR 'a' XOR other_iv[i]
+	decrypted_byte1 = ord('a') ^ other_iv[0] ^ ct_blocks[idx-1][0]
+	decrypted_byte2 = ord('a') ^ other_iv[1] ^ ct_blocks[idx-1][1]
+	print('Block #%d = [%s%s..............]' % (idx, chr(decrypted_byte1), chr(decrypted_byte2)) )
