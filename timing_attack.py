@@ -125,7 +125,7 @@ for idx in range(1, len(ct_blocks)):
 	rand = Random.new().read(AES.block_size)
 
 	# We send a 3-block message to the decrypt function
-	# and repeat with a new rand until we get a collision
+	# and repeat with a new rand until we get a first-byte MAC collision
 	message = iv + rand + ct_blocks[idx]
 	while decrypt(message, secret_key) == 0:
 		rand = Random.new().read(AES.block_size)
@@ -137,7 +137,7 @@ for idx in range(1, len(ct_blocks)):
 	# We now go through all the possible first bytes
 	for nb in range(0, 256):
 		message = iv + rand + CPA_dict[nb]
-		# If we have a collision
+		# If we have a first-byte MAC collision
 		if decrypt(message, secret_key)	> 0:
 			# MAC(Decr(rand))[0] = Decr(ct_blocks[idx])[0] (see line 132)
 			# MAC(Decr(rand))[0] = Decr(CPA_dict[nb])[0] = nb (per CPA_dict property, see line 89)
@@ -197,14 +197,14 @@ for idx in range(1, len(ct_blocks)):
 	rand = Random.new().read(AES.block_size)
 
 	# We send a 3-block message to the decrypt function
-	# and repeat with a new rand until we get a collision
+	# and repeat with a new rand until we get a first-two-bytes MAC collision
 	message = iv + rand + ct_blocks[idx]
 	while decrypt(message, secret_key) != 2:
 		rand = Random.new().read(AES.block_size)
 		message = iv + rand + ct_blocks[idx]
 
 	# Instead of building a CPA dictionary, we generate
-	# random ciphertexts (from a known plaintext) until we get a collision
+	# random ciphertexts (from a known plaintext) until we get a first-two-bytes MAC collision
 	# i.e. until its MAC has the first right two bytes
 	ciphertext = encrypt(plaintext, secret_key)
 	fake_mac = ciphertext[16:-16]
