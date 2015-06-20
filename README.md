@@ -26,7 +26,9 @@ In order for this attack to succeed, the attacker needs to be able to:
 - perform a Chosen-Ciphertext Attack (CCA) by submitting forged ciphertexts to an oracle to see if the decryption fails or succeeds
 - precisely measure the time it takes for the decrypt function to fail, in order to see if the first byte of the MAC is correct or not
 
+  
+  
 
-<sup>(*) Even though this is not covered here, in the case of an Encrypt-then-MAC or Encrypt-and-MAC scheme, an attacker can forge a valid MAC for a modified ciphertext. By trying all 256 possibilities for the forged MAC's first byte, the possibility that takes a bit longer to decrypt tells the MAC's correct first byte. The same operation can be repeated for the other bytes.
+<sup>(*) Even though this is not covered here, in the case of an Encrypt-then-MAC or Encrypt-and-MAC scheme, an attacker can forge a valid MAC for a modified ciphertext. By trying all 256 possibilities for the forged MAC's first byte, the possibility that takes a bit longer to decrypt tells the MAC's correct first byte. The same operation can be repeated for the other bytes.</sup>
 
-One way to prevent a timing attack is to make sure the comparison goes through all the characters no matter what, but beware of compiler optimizations that could short-circuit that scheme. The best protection is to hash the MACs (e.g. using SHA1) and compare the hash. Even if the comparison time varies, its timing does not give any information about the submitted MAC.</sup>
+<sup>One way to prevent a timing attack is to make sure the comparison goes through all the characters no matter what, but beware of compiler optimizations that could short-circuit that scheme. The best protection is to hash the MACs (e.g. using SHA1) and compare the hash. Even if the comparison time varies, its timing does not give any information about the submitted MAC.</sup>
