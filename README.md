@@ -26,8 +26,9 @@ In order for this attack to succeed, the attacker needs to be able to:
 - perform a Chosen-Ciphertext Attack (CCA) by submitting forged ciphertexts to an oracle to see if the decryption fails or succeeds
 - precisely measure the time it takes for the decrypt function to fail, in order to see if the first byte of the MAC is correct or not
 
-  
-  
+<br/>
+<br/>
+<br/>
 
 <sup>(*) Even though this is not covered here, in the case of an Encrypt-then-MAC or Encrypt-and-MAC scheme, an attacker can forge a valid MAC for a modified ciphertext. By trying all 256 possibilities for the forged MAC's first byte, the possibility that takes a bit longer to decrypt tells the MAC's correct first byte. The same operation can be repeated for the other bytes.</sup>
 
